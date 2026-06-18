@@ -1,0 +1,237 @@
+name: Route public issues
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Route issue labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const core = require("@actions/core");
+            const fs = require("fs");
+            const path = require("path");
+
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = issue.number;
+            const body = issue.body || "";
+            const existingLabels = (issue.labels || []).map((label) =>
+              typeof label === "string" ? label : label.name,
+            );
+
+            const labelDefinitions = {
+              "type:correction": {
+                color: "1d76db",
+                description: "출처 오류·정정 요청",
+              },
+              "type:removal": {
+                color: "d73a4a",
+                description: "비노출 또는 삭제 요청",
+              },
+              "type:privacy": {
+                color: "6f42c1",
+                description: "개인정보·집계 문의",
+              },
+              "project:unknown": {
+                color: "5319e7",
+                description: "프로젝트 식별이 필요한 요청",
+              },
+              "status:needs-review": {
+                color: "fbca04",
+                description: "운영자 검토 필요",
+              },
+              "status:waiting-response": {
+                color: "f9d0c4",
+                description: "제보자 추가 응답 대기",
+              },
+              "status:done": {
+                color: "0e8a16",
+                description: "처리 완료",
+              },
+              "needs:evidence": {
+                color: "b60205",
+                description: "근거 또는 페이지 정보 보강 필요",
+              },
+            };
+
+            function escapeRegExp(value) {
+              return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+
+            function parseField(label) {
+              const pattern = new RegExp(
+                `### ${escapeRegExp(label)}\\s*\\n\\n([\\s\\S]*?)(?=\\n### |$)`,
+              );
+              const match = body.match(pattern);
+
+              if (!match) {
+                return "";
+              }
+
+              const value = match[1].trim();
+              return value === "_No response_" ? "" : value;
+            }
+
+            function detectTypeLabel() {
+              if (issue.title.startsWith("[정정 요청]")) {
+                return "type:correction";
+              }
+
+              if (issue.title.startsWith("[비노출 요청]")) {
+                return "type:removal";
+              }
+
+              if (issue.title.startsWith("[개인정보 문의]")) {
+                return "type:privacy";
+              }
+
+              return null;
+            }
+
+            function loadProjectConfig(projectId) {
+              if (!projectId) {
+                return null;
+              }
+
+              const filePath = path.join(
+                process.env.GITHUB_WORKSPACE,
+                "projects",
+                `${projectId}.json`,
+              );
+
+              if (!fs.existsSync(filePath)) {
+                return null;
+              }
+
+              return JSON.parse(fs.readFileSync(filePath, "utf8"));
+            }
+
+            async function ensureLabel(name) {
+              const definition = labelDefinitions[name];
+
+              if (!definition) {
+                core.warning(`Missing label definition for ${name}`);
+                return;
+              }
+
+              try {
+                await github.rest.issues.getLabel({
+                  owner,
+                  repo,
+                  name,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name,
+                  color: definition.color,
+                  description: definition.description,
+                });
+              }
+            }
+
+            async function addLabel(name) {
+              if (existingLabels.includes(name)) {
+                return;
+              }
+
+              await ensureLabel(name);
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                labels: [name],
+              });
+            }
+
+            async function removeLabel(name) {
+              if (!existingLabels.includes(name)) {
+                return;
+              }
+
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+            const typeLabel = detectTypeLabel();
+            const projectId = parseField("프로젝트 ID");
+            const pageUrl = parseField("문제 페이지 URL");
+            const statusLabels = existingLabels.filter((name) =>
+              name.startsWith("status:"),
+            );
+            const projectConfig = loadProjectConfig(projectId);
+            const hasRequiredContentByType =
+              typeLabel === "type:correction"
+                ? Boolean(
+                    pageUrl &&
+                      parseField("확인 근거") &&
+                      parseField("어떤 점이 잘못되었나요?"),
+                  )
+                : typeLabel === "type:removal"
+                  ? Boolean(
+                      pageUrl &&
+                        parseField("확인 근거") &&
+                        parseField("요청 상세"),
+                    )
+                  : typeLabel === "type:privacy"
+                    ? Boolean(pageUrl && parseField("문의 내용"))
+                    : Boolean(pageUrl);
+
+            if (typeLabel) {
+              await addLabel(typeLabel);
+            }
+
+            if (projectConfig?.labels?.length) {
+              for (const label of projectConfig.labels) {
+                labelDefinitions[label.name] = {
+                  color: label.color,
+                  description: label.description,
+                };
+                await addLabel(label.name);
+              }
+
+              await removeLabel("project:unknown");
+            } else {
+              await addLabel("project:unknown");
+            }
+
+            if (statusLabels.length === 0) {
+              await addLabel("status:needs-review");
+            }
+
+            if (!hasRequiredContentByType) {
+              await addLabel("needs:evidence");
+            } else {
+              await removeLabel("needs:evidence");
+            }

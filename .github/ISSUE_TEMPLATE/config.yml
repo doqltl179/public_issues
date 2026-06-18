@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 저장소 안내
+    url: https://github.com/doqltl179/public_issues
+    about: 공개 이슈 저장소의 목적과 제출 원칙을 확인합니다.
+  - name: 마감 캘린더 요청 안내
+    url: https://web-job-information.pages.dev/contact
+    about: 현재 연결된 프로젝트의 공개 요청 안내 페이지를 확인합니다.

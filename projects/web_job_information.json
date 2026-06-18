@@ -1,0 +1,14 @@
+{
+  "projectId": "web_job_information",
+  "displayName": "마감 캘린더",
+  "siteUrl": "https://web-job-information.pages.dev",
+  "repositoryUrl": "https://github.com/doqltl179/web_job_information",
+  "labels": [
+    {
+      "name": "project:web_job_information",
+      "color": "0e8a16",
+      "description": "마감 캘린더 관련 공개 요청"
+    }
+  ],
+  "maintainers": ["doqltl179"]
+}

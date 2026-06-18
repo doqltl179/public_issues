@@ -1,0 +1,102 @@
+name: 출처 오류·정정 요청
+description: 공고 제목, 마감일, 원문 URL, 상태 변경 등 표시 정보 정정 요청
+title: "[정정 요청] "
+labels:
+  - type:correction
+body:
+  - type: markdown
+    attributes:
+      value: |
+        공개 저장소로 접수되는 이슈입니다.
+        민감한 개인정보는 적지 말고, 문제 페이지 URL과 원문 URL, 공개 가능한 설명과 근거 위주로 작성해 주세요.
+  - type: input
+    id: project_id
+    attributes:
+      label: 프로젝트 ID
+      description: 사이트에서 자동으로 채워질 수 있습니다.
+      placeholder: web_job_information
+    validations:
+      required: true
+  - type: input
+    id: project_name
+    attributes:
+      label: 프로젝트 이름
+      placeholder: 마감 캘린더
+    validations:
+      required: true
+  - type: input
+    id: project_repo
+    attributes:
+      label: 프로젝트 저장소
+      placeholder: https://github.com/doqltl179/web_job_information
+  - type: input
+    id: project_site
+    attributes:
+      label: 프로젝트 사이트
+      placeholder: https://web-job-information.pages.dev
+    validations:
+      required: true
+  - type: input
+    id: page_url
+    attributes:
+      label: 문제 페이지 URL
+      placeholder: https://web-job-information.pages.dev/announcements/...
+    validations:
+      required: true
+  - type: input
+    id: source_url
+    attributes:
+      label: 원문 공고 URL
+      placeholder: https://...
+    validations:
+      required: true
+  - type: input
+    id: announcement_id
+    attributes:
+      label: 공고 ID
+      placeholder: contest-00140b50c0
+  - type: input
+    id: announcement_title
+    attributes:
+      label: 공고 제목
+      placeholder: 2026 예시 공모 공고
+  - type: input
+    id: source_name
+    attributes:
+      label: 출처명
+      placeholder: 문화포털
+  - type: dropdown
+    id: correction_type
+    attributes:
+      label: 요청 유형
+      options:
+        - 제목 오류
+        - 마감일 오류
+        - 원문 URL 오류
+        - 원문 상태 변경
+        - 기타 정보 수정
+    validations:
+      required: true
+  - type: textarea
+    id: issue_summary
+    attributes:
+      label: 어떤 점이 잘못되었나요?
+      description: 현재 표시 정보와 실제 원문 차이를 구체적으로 적어 주세요.
+      placeholder: 원문에는 2026-06-20까지로 되어 있는데 사이트에는 2026-06-14로 표시됩니다.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 확인 근거
+      description: 원문 문구, 수정 공지, 공개 가능한 스크린샷 설명 등을 적어 주세요.
+      placeholder: 원문 본문 3번째 문단에 접수 기간 연장 공지가 있습니다.
+    validations:
+      required: true
+  - type: checkboxes
+    id: public_notice
+    attributes:
+      label: 공개 저장소 확인
+      options:
+        - label: 민감한 개인정보를 적지 않았고 공개 가능한 정보만 남겼습니다.
+          required: true
